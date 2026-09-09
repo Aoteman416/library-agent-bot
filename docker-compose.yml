@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # 生产环境关闭 DEBUG，启用鉴权 / 限流 / 持久化
+      - DEBUG=false
+      - APP_NAME=LibrarySmartService
+      # 关系数据库
+      - DB_ENABLED=true
+      - DATABASE_URL=mysql+pymysql://root:library@mysql:3306/library_service
+      # 缓存
+      - REDIS_ENABLED=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # 限流
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_PER_USER=30
+      - RATE_LIMIT_PER_IP=100
+      # 鉴权
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-me-in-production}
+      # RAG（可选：开启稠密向量 + 重排序）
+      - EMBEDDING_MODE=${EMBEDDING_MODE:-ngram}
+      - VECTOR_STORE_MODE=${VECTOR_STORE_MODE:-memory}
+      - RERANKER_ENABLED=${RERANKER_ENABLED:-false}
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - ./data:/app/data
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: library
+      MYSQL_DATABASE: library_service
+      MYSQL_CHARSET: utf8mb4
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  mysql_data:

@@ -1,0 +1,48 @@
+{"id": 1, "query": "图书馆周一到周五几点开门", "relevant_source": "开放时间与办证.md", "relevant_category": "开放时间", "must_contain": ["8:00", "22:00"]}
+{"id": 2, "query": "周末图书馆什么时候开放", "relevant_source": "开放时间与办证.md", "relevant_category": "开放时间", "must_contain": ["9:00", "21:00"]}
+{"id": 3, "query": "法定节假日开馆时间怎么查", "relevant_source": "开放时间与办证.md", "relevant_category": "开放时间", "must_contain": ["另行通知"]}
+{"id": 4, "query": "寒暑假图书馆几点到几点", "relevant_source": "开放时间与办证.md", "relevant_category": "寒暑假开放时间", "must_contain": ["9:00", "17:00"]}
+{"id": 5, "query": "寒假期间5楼研习间还开放吗", "relevant_source": "开放时间与办证.md", "relevant_category": "寒暑假开放时间", "must_contain": ["研习间", "暂停"]}
+{"id": 6, "query": "怎么办借书证", "relevant_source": "开放时间与办证.md", "relevant_category": "办证方法", "must_contain": ["校园卡", "总服务台"]}
+{"id": 7, "query": "校友能办借阅证吗，要带什么", "relevant_source": "开放时间与办证.md", "relevant_category": "办证方法", "must_contain": ["毕业证", "身份证"]}
+{"id": 8, "query": "校友借阅证有效期多久", "relevant_source": "开放时间与办证.md", "relevant_category": "办证方法", "must_contain": ["2年"]}
+{"id": 9, "query": "校外人员可以进图书馆参观吗", "relevant_source": "开放时间与办证.md", "relevant_category": "校外访客", "must_contain": ["身份证", "登记"]}
+{"id": 10, "query": "校外访客能不能借书出去", "relevant_source": "开放时间与办证.md", "relevant_category": "校外访客", "must_contain": ["不可外借"]}
+{"id": 11, "query": "在校外怎么访问图书馆数据库", "relevant_source": "开放时间与办证.md", "relevant_category": "电子资源访问", "must_contain": ["VPN"]}
+{"id": 12, "query": "本科生最多能借几本书", "relevant_source": "借阅规则.md", "relevant_category": "借阅数量", "must_contain": ["20册"]}
+{"id": 13, "query": "研究生一次能借多少册", "relevant_source": "借阅规则.md", "relevant_category": "借阅数量", "must_contain": ["30册"]}
+{"id": 14, "query": "老师能借多少本书", "relevant_source": "借阅规则.md", "relevant_category": "借阅数量", "must_contain": ["50册"]}
+{"id": 15, "query": "本科生借书期限是多少天", "relevant_source": "借阅规则.md", "relevant_category": "借阅期限", "must_contain": ["30天"]}
+{"id": 16, "query": "研究生借的书可以保留多久", "relevant_source": "借阅规则.md", "relevant_category": "借阅期限", "must_contain": ["60天"]}
+{"id": 17, "query": "教师借阅期限多长", "relevant_source": "借阅规则.md", "relevant_category": "借阅期限", "must_contain": ["90天"]}
+{"id": 18, "query": "一本书能续借几次", "relevant_source": "借阅规则.md", "relevant_category": "续借规则", "must_contain": ["一次"]}
+{"id": 19, "query": "怎么办理续借，要提前多久", "relevant_source": "借阅规则.md", "relevant_category": "续借规则", "must_contain": ["到期前7天"]}
+{"id": 20, "query": "什么情况下的书不能续借", "relevant_source": "借阅规则.md", "relevant_category": "续借规则", "must_contain": ["预约"]}
+{"id": 21, "query": "图书逾期了要交多少钱", "relevant_source": "借阅规则.md", "relevant_category": "逾期费用", "must_contain": ["0.1元"]}
+{"id": 22, "query": "逾期太久会被停借吗", "relevant_source": "借阅规则.md", "relevant_category": "逾期费用", "must_contain": ["60天"]}
+{"id": 23, "query": "逾期罚款最多要赔多少", "relevant_source": "借阅规则.md", "relevant_category": "逾期费用", "must_contain": ["2倍"]}
+{"id": 24, "query": "书弄丢了要怎么赔偿", "relevant_source": "借阅规则.md", "relevant_category": "遗失赔偿", "must_contain": ["挂失"]}
+{"id": 25, "query": "丢书要按原价几倍赔", "relevant_source": "借阅规则.md", "relevant_category": "遗失赔偿", "must_contain": ["2至5倍"]}
+{"id": 26, "query": "怎么推荐图书馆采购新书", "relevant_source": "借阅规则.md", "relevant_category": "读者荐购", "must_contain": ["读者荐购"]}
+{"id": 27, "query": "荐购的书到馆后会通知我吗", "relevant_source": "借阅规则.md", "relevant_category": "读者荐购", "must_contain": ["优先借阅"]}
+{"id": 28, "query": "图书馆一共有几层", "relevant_source": "馆内设施与导航.md", "relevant_category": "馆内布局", "must_contain": ["5层"]}
+{"id": 29, "query": "3楼有哪些借阅区", "relevant_source": "馆内设施与导航.md", "relevant_category": "馆内布局", "must_contain": ["A区文学"]}
+{"id": 30, "query": "4楼有什么部门和阅览室", "relevant_source": "馆内设施与导航.md", "relevant_category": "馆内布局", "must_contain": ["参考咨询部", "电子阅览室"]}
+{"id": 31, "query": "总服务台在几楼", "relevant_source": "馆内设施与导航.md", "relevant_category": "总服务台", "must_contain": ["1楼"]}
+{"id": 32, "query": "总服务台的服务时间是几点到几点", "relevant_source": "馆内设施与导航.md", "relevant_category": "总服务台", "must_contain": ["9:00", "17:00"]}
+{"id": 33, "query": "自助还书机在哪里", "relevant_source": "馆内设施与导航.md", "relevant_category": "还书方式", "must_contain": ["24小时自助还书机", "1楼"]}
+{"id": 34, "query": "座位怎么预约，最长能约多久", "relevant_source": "馆内设施与导航.md", "relevant_category": "座位与自习室", "must_contain": ["4小时"]}
+{"id": 35, "query": "预约了座位没去签到会怎么样", "relevant_source": "馆内设施与导航.md", "relevant_category": "座位与自习室", "must_contain": ["违约"]}
+{"id": 36, "query": "图书馆里能带奶茶进去吗", "relevant_source": "馆内设施与导航.md", "relevant_category": "馆内规则", "must_contain": ["含糖饮料"]}
+{"id": 37, "query": "馆内有无线网吗", "relevant_source": "馆内设施与导航.md", "relevant_category": "馆内规则", "must_contain": ["WiFi"]}
+{"id": 38, "query": "在阅览区可以打电话吗", "relevant_source": "馆内设施与导航.md", "relevant_category": "馆内规则", "must_contain": ["静音", "走廊"]}
+{"id": 39, "query": "知网怎么进", "relevant_source": "资源使用.md", "relevant_category": "中国知网使用", "must_contain": ["cnki.net"]}
+{"id": 40, "query": "论文查重去哪里预约", "relevant_source": "资源使用.md", "relevant_category": "论文查重", "must_contain": ["4楼", "参考咨询部"]}
+{"id": 41, "query": "本科生每学期免费查重几次", "relevant_source": "资源使用.md", "relevant_category": "论文查重", "must_contain": ["2次"]}
+{"id": 42, "query": "研究生免费查重次数是多少", "relevant_source": "资源使用.md", "relevant_category": "论文查重", "must_contain": ["3次"]}
+{"id": 43, "query": "查重次数用完了怎么收费", "relevant_source": "资源使用.md", "relevant_category": "论文查重", "must_contain": ["20元"]}
+{"id": 44, "query": "图书馆订了多少个数据库", "relevant_source": "资源使用.md", "relevant_category": "数据库与电子期刊", "must_contain": ["40余个"]}
+{"id": 45, "query": "万方数据库在校外怎么用", "relevant_source": "资源使用.md", "relevant_category": "数据库与电子期刊", "must_contain": ["校外访问"]}
+{"id": 46, "query": "打印一张多少钱", "relevant_source": "资源使用.md", "relevant_category": "自助打印", "must_contain": ["0.1元", "1元"]}
+{"id": 47, "query": "哪里可以自助打印", "relevant_source": "资源使用.md", "relevant_category": "自助打印", "must_contain": ["2楼", "4楼"]}
+{"id": 48, "query": "VPN客户端要怎么安装登录", "relevant_source": "资源使用.md", "relevant_category": "VPN设置", "must_contain": ["VPN客户端"]}

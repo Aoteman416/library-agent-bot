@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>图书馆智能客服</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <h1 class="app-title">📚 图书馆智能客服</h1>
+      <span class="mode-badge" id="modeBadge">加载中…</span>
+    </div>
+    <div class="header-right">
+      <button id="loginBtn" class="btn btn-ghost" title="登录体验借阅查询">👤 登录</button>
+      <button id="exitBtn" class="btn btn-ghost hidden" title="退出到游客身份">🚪 退出</button>
+      <button id="newChatBtn" class="btn btn-ghost" title="开启新会话">🆕 新会话</button>
+    </div>
+  </header>
+
+  <main class="chat-container">
+    <div id="messageList" class="message-list">
+      <div class="welcome-card">
+        <h2>你好，我是图书馆智能客服 🤖</h2>
+        <p>我可以帮你查书、查借阅、预约座位、解答图书馆规则。</p>
+        <p>试试点击下方快捷问题，或直接输入你的问题。</p>
+      </div>
+    </div>
+
+    <div class="quick-actions" id="quickActions">
+      <button class="chip" data-msg="三体有没有在架">查书：三体</button>
+      <button class="chip" data-msg="开放时间是什么">开放时间</button>
+      <button class="chip" data-msg="座位余量">座位余量</button>
+      <button class="chip" data-msg="怎么用知网">知网使用</button>
+      <button class="chip" data-msg="论文查重">论文查重</button>
+    </div>
+
+    <div class="input-bar">
+      <textarea id="inputBox" rows="1" placeholder="输入你的问题，例如：寒暑假借书规则是什么？" maxlength="2000"></textarea>
+      <button id="sendBtn" class="btn btn-primary">发送</button>
+    </div>
+  </main>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

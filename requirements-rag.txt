@@ -1,0 +1,17 @@
+# ===== RAG 增强依赖（可选）=====
+# 作用：把默认的「稀疏 n-gram + 内存索引」切换为「BGE 稠密向量 + Chroma 持久化索引」，
+#       并启用 Cross-Encoder 重排序（bge-reranker-large）。
+# 安装：pip install -r requirements-rag.txt
+# 切换：.env 中设置 EMBEDDING_MODE=external、VECTOR_STORE_MODE=chroma、RERANKER_ENABLED=true
+#
+# 说明：不安装也能正常启动服务，会自动回退到零依赖的稀疏检索（见 create_embedder / create_store / create_reranker）。
+
+# 稠密 Embedding（默认模型 BAAI/bge-large-zh-v1.5，约 1.3GB，首次运行自动下载）
+sentence-transformers>=2.7
+torch>=2.2
+
+# 向量数据库（默认落盘到 ./data/chroma）
+chromadb>=0.5
+
+# 注：Cross-Encoder 重排序器同样来自 sentence-transformers.CrossEncoder，
+#     无需额外安装即可在 RERANKER_ENABLED=true 时启用。

@@ -1,0 +1,30 @@
+[
+  {
+    "label": "ngram+memory",
+    "num_cases": 48,
+    "metrics": {
+      "1": {
+        "recall@1": 0.8542,
+        "precision@1": 0.8542,
+        "hit_rate@1": 0.8542,
+        "keyword_hit_rate@1": 0.8542,
+        "mrr": 0.8542
+      },
+      "3": {
+        "recall@3": 0.9583,
+        "precision@3": 0.3194,
+        "hit_rate@3": 0.9583,
+        "keyword_hit_rate@3": 0.9583,
+        "mrr": 0.8958
+      },
+      "5": {
+        "recall@5": 1.0,
+        "precision@5": 0.2,
+        "hit_rate@5": 1.0,
+        "keyword_hit_rate@5": 1.0,
+        "mrr": 0.9062
+      }
+    },
+    "failures": []
+  }
+]

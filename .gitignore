@@ -1,0 +1,44 @@
+# ===== 敏感信息（务必不要上传）=====
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+secrets.*
+config.local.*
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# ===== 编辑器 / 系统 =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ===== 本地 IDE / 工具数据 =====
+.codebuddy/
+
+# 若不想把 BMAD 工作流文件共享到仓库，取消下面两行注释
+# _bmad/
+# _bmad-output/
