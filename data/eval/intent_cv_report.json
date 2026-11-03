@@ -1,0 +1,123 @@
+{
+  "num_cases": 300,
+  "folds": 5,
+  "seed": 0,
+  "per_fold": [
+    {
+      "fold": 1,
+      "n_test": 65,
+      "accuracy": 0.7231,
+      "macro_f1": 0.7232
+    },
+    {
+      "fold": 2,
+      "n_test": 64,
+      "accuracy": 0.875,
+      "macro_f1": 0.8847
+    },
+    {
+      "fold": 3,
+      "n_test": 57,
+      "accuracy": 0.8421,
+      "macro_f1": 0.8496
+    },
+    {
+      "fold": 4,
+      "n_test": 57,
+      "accuracy": 0.807,
+      "macro_f1": 0.8229
+    },
+    {
+      "fold": 5,
+      "n_test": 57,
+      "accuracy": 0.9123,
+      "macro_f1": 0.9143
+    }
+  ],
+  "accuracy_mean": 0.8319,
+  "accuracy_std": 0.0646,
+  "macro_f1_mean": 0.8389,
+  "macro_f1_std": 0.0656,
+  "confusion_matrix": {
+    "seat_reserve": {
+      "seat_reserve": 33,
+      "borrow_manage": 0,
+      "book_search": 0,
+      "human_transfer": 0,
+      "policy_faq": 0,
+      "resource_guide": 0,
+      "navigation": 3,
+      "unknown": 0
+    },
+    "borrow_manage": {
+      "seat_reserve": 0,
+      "borrow_manage": 28,
+      "book_search": 1,
+      "human_transfer": 0,
+      "policy_faq": 0,
+      "resource_guide": 0,
+      "navigation": 1,
+      "unknown": 7
+    },
+    "book_search": {
+      "seat_reserve": 0,
+      "borrow_manage": 0,
+      "book_search": 24,
+      "human_transfer": 1,
+      "policy_faq": 0,
+      "resource_guide": 0,
+      "navigation": 3,
+      "unknown": 9
+    },
+    "human_transfer": {
+      "seat_reserve": 0,
+      "borrow_manage": 0,
+      "book_search": 0,
+      "human_transfer": 34,
+      "policy_faq": 0,
+      "resource_guide": 0,
+      "navigation": 0,
+      "unknown": 3
+    },
+    "policy_faq": {
+      "seat_reserve": 0,
+      "borrow_manage": 3,
+      "book_search": 0,
+      "human_transfer": 0,
+      "policy_faq": 24,
+      "resource_guide": 0,
+      "navigation": 0,
+      "unknown": 10
+    },
+    "resource_guide": {
+      "seat_reserve": 0,
+      "borrow_manage": 0,
+      "book_search": 0,
+      "human_transfer": 0,
+      "policy_faq": 0,
+      "resource_guide": 32,
+      "navigation": 2,
+      "unknown": 3
+    },
+    "navigation": {
+      "seat_reserve": 0,
+      "borrow_manage": 1,
+      "book_search": 0,
+      "human_transfer": 0,
+      "policy_faq": 0,
+      "resource_guide": 0,
+      "navigation": 33,
+      "unknown": 3
+    },
+    "unknown": {
+      "seat_reserve": 0,
+      "borrow_manage": 0,
+      "book_search": 0,
+      "human_transfer": 1,
+      "policy_faq": 0,
+      "resource_guide": 0,
+      "navigation": 0,
+      "unknown": 41
+    }
+  }
+}

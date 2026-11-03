@@ -17,12 +17,22 @@ from typing import AsyncIterator, Dict, List, Optional, Tuple
 
 from ..core.cache import faq_cache
 from ..config import settings
-from ..core.dst import DialogueState, SEAT_RESERVATION_SLOTS, RENEW_SLOTS
+from ..core.dst import (
+    DialogueState,
+    SEAT_RESERVATION_SLOTS,
+    RENEW_SLOTS,
+    Stage,
+    grade_seat_risk,
+    grade_renew_risk,
+)
 from ..core.llm_client import llm_client
-from ..core.nlu import parse_time, parse_date, parse_area, extract_entities
+from ..core.nlu import extract_entities
 from ..core.permissions import permission_manager, auth_upgrade_flow
 from ..core.query_rewriter import query_rewriter
 from ..core.intent_rewriter import intent_rewriter
+from ..core.router import RouteDecisionMaker
+from ..core.post_processor import post_processor
+from ..core.circuit_breaker import borrow_breaker, llm_breaker
 from ..core.security import security_guard
 from ..core.session_manager import Session
 from ..utils.helpers import chunk_text
@@ -31,6 +41,7 @@ from .book_service import book_service
 from .rag_service import rag_service
 from .seat_service import seat_service
 from .user_service import user_service
+from .human_service import human_service
 
 
 # ================= 意图权重表（不变）=================
@@ -117,6 +128,19 @@ class IntentClassifier:
             return None
         return max(filtered, key=filtered.get)
 
+    def score_all(self, text: str) -> Dict[str, float]:
+        """返回每个意图的加权得分（供路由决策器做多意图 / 置信度判定）"""
+        text_lower = text.lower()
+        scores: Dict[str, float] = {}
+        for intent, rules in INTENT_WEIGHTS.items():
+            total = 0
+            for keyword, weight in rules:
+                if keyword.lower() in text_lower:
+                    total += weight
+            if total > 0:
+                scores[intent] = total
+        return scores
+
 
 class ChatServiceV2:
     """对话编排服务 V2：三通道 + 多轮 + DST + 安全"""
@@ -132,8 +156,8 @@ class ChatServiceV2:
         user_id: str = "guest",
         user_role: str = "student",
     ) -> AsyncIterator[Dict]:
-        """处理一条消息的完整流程"""
-        # 1. 安全检查
+        """处理一条消息的完整流程（Module 3 编排 + Module 4 路由决策）"""
+        # 1. 安全守卫（Module 3.1 L1）
         security_check = security_guard.check_injection(message)
         if security_check["blocked"]:
             yield self._event("token", {"content": security_check["message"]})
@@ -141,88 +165,102 @@ class ChatServiceV2:
                 "reply_type": "text",
                 "answer": security_check["message"],
                 "security_blocked": True,
+                "channel": "security",
             })
             return
 
-        # 2. 会话状态检查：是否在槽位收集阶段
         state = session.state
+
+        # 2. 多轮状态：槽位收集 / 待确认（DST）
         if state.phase == "collecting_slots":
             async for ev in self._fill_slots(session, message, user_id):
                 yield ev
             return
-
-        # 3. 会话状态检查：是否待确认
         if state.phase == "confirming":
             async for ev in self._handle_confirmation(session, message, user_id):
                 yield ev
             return
 
-        # 4. 意图分类（关键词）
-        intent, score, channel = self.classifier.classify(message)
+        # 3. 意图识别：关键词（一号信号）
+        intent, score, _channel = self.classifier.classify(message)
+        kw_scores = self.classifier.score_all(message)
         admin_service.record_question(message)
-        admin_service.record_channel(channel)
+        admin_service.record_channel(RouteDecisionMaker().channel_map.get(intent, "rag"))
 
-        # 4.5 LLM 意图理解增强：低置信度时理解口语化语义并改写查询
+        # 4. LLM 意图理解增强（二号信号）+ 改写
         history = session.history()
         rewrite = await intent_rewriter.rewrite(
             message, score=score,
             session_id=session.session_id, history=history,
         )
-        if rewrite["intent"]:
-            intent = rewrite["intent"]
-            if intent in BUSINESS_INTENTS:
-                channel = "business"
-            elif intent in FAQ_INTENTS:
-                channel = "faq"
-            else:
-                channel = "rag"
-        # 改写后的查询（LLM 语义改写 or 启发式规范化）
+        llm_intent = rewrite.get("intent", "") or ""
         rewritten_message = rewrite["query"]
-        rewrite_context = {}
+        rewrite_context: Dict = {}
         if rewrite.get("book_title"):
             rewrite_context["book_title"] = rewrite["book_title"]
             rewrite_context["resolved_book"] = rewrite["book_title"]
-        # Function Calling 抽出的业务槽位（座位预约预填充）
         for _slot in ("date", "start_time", "end_time", "area"):
             if rewrite.get(_slot):
                 rewrite_context[_slot] = rewrite[_slot]
 
-        # 5. 多轮指代消解改写（叠加）
-        if channel == "rag":
-            msg, context = query_rewriter.rewrite(
-                session.session_id, message, history
-            )
+        # 5. 路由决策（Module 4：意图→通道 / 多意图 / 置信度澄清）
+        intent_result = RouteDecisionMaker().decide(intent, score, kw_scores, llm_intent)
+
+        # 澄清 / 多意图分支：低置信且有多候选，或检测到多意图 → 澄清 + 选项
+        options = intent_result.clarification_options or intent_result.multi_intent
+        if intent_result.intent != "unknown" and (
+            (intent_result.needs_clarification and intent_result.clarification_options)
+            or intent_result.multi_intent
+        ):
+            text = self._clarify_text(message, options or [intent_result.intent])
+            yield self._event("route", {
+                "channel": "clarify",
+                "intent": intent_result.intent,
+                "confidence": intent_result.confidence,
+            })
+            yield self._event("token", {"content": text})
+            yield self._event("done", post_processor.finalize(
+                intent_result=intent_result, channel="clarify",
+                reply_type="clarify", answer=text,
+            ))
+            return
+
+        # 6. 多轮指代消解（仅 RAG 通道）
+        if intent_result.channel == "rag":
+            msg, context = query_rewriter.rewrite(session.session_id, message, history)
             rewritten_message = msg
             context.update(rewrite_context)
         else:
             context = rewrite_context or {}
 
-        # 6. 路由决策
-        if channel == "business":
-            # 权限检查
-            perm = permission_manager.can_access(user_id, user_role, intent)
+        # 7. 路由分发
+        if intent_result.channel == "human":
+            async for ev in self._route_human(session, intent_result, message):
+                yield ev
+            return
+
+        if intent_result.channel == "business":
+            perm = permission_manager.can_access(user_id, user_role, intent_result.intent)
             if not perm["allowed"] and perm["require_login"]:
-                async for ev in self._require_login_flow(session, message, intent):
+                async for ev in self._require_login_flow(session, message, intent_result.intent):
                     yield ev
                 return
-
             async for ev in self._route_business(
-                session, intent, user_id, rewritten_message, context
+                session, intent_result.intent, user_id, rewritten_message, context, intent_result
             ):
                 yield ev
             return
 
-        if channel == "faq":
+        if intent_result.channel == "faq":
             async for ev in self._route_faq(
-                session, intent, rewritten_message, context
+                session, intent_result, rewritten_message, context
             ):
                 yield ev
             return
 
-        # RAG 通道
-        # 特殊：unknown 意图 + LLM 可用 → 走 LLM 闲聊通道
+        # RAG 通道 / unknown 兜底
         if (
-            intent == "unknown"
+            intent_result.intent == "unknown"
             and llm_client.enabled
             and settings.CHAT_FALLBACK_TO_LLM
         ):
@@ -231,14 +269,14 @@ class ChatServiceV2:
             return
 
         async for ev in self._route_rag(
-            session, rewritten_message, history, context
+            session, intent_result, rewritten_message, history, context
         ):
             yield ev
 
     # ================= 业务通道 =================
     async def _route_business(
         self, session: Session, intent: str, user_id: str,
-        message: str, context: Dict
+        message: str, context: Dict, intent_result: object = None,
     ) -> AsyncIterator[Dict]:
         yield self._event("route", {"channel": "business", "intent": intent})
 
@@ -256,13 +294,26 @@ class ChatServiceV2:
                 yield ev
             return
 
-        # 其他业务：直接处理
+        # 其他业务：直接处理（经统一后处理层）
         reply = self._handle_simple_business(intent, user_id, message, context)
         if reply:
-            async for ev in self._stream_reply(reply, channel="business"):
-                yield ev
+            content = reply["content"]
+            sources = reply.get("sources")
+            extra = reply.get("extra")
+            done = post_processor.finalize(
+                intent_result=intent_result, channel="business",
+                reply_type=reply.get("reply_type", "text"),
+                answer=content, sources=sources, extra=extra,
+            )
+            for piece in chunk_text(content, size=12):
+                yield self._event("token", {"content": piece})
+            if extra:
+                yield self._event("card", {"reply_type": reply.get("reply_type"), "extra": extra})
+            if sources:
+                yield self._event("sources", {"documents": sources})
+            yield self._event("done", done)
             session.add("user", message)
-            session.add("assistant", reply.get("content", ""))
+            session.add("assistant", content)
 
     def _handle_simple_business(
         self, intent: str, user_id: str, message: str, context: Dict | None = None
@@ -270,13 +321,55 @@ class ChatServiceV2:
         context = context or {}
         if intent == "book_search":
             return self._search_book(message, book_title=context.get("book_title"))
-        if intent == "human_transfer":
-            return {
-                "reply_type": "transfer",
-                "content": "正在为您转接人工客服（服务时间 9:00-17:00），请稍候...\n非服务时间会自动转为留言工单。",
-                "extra": {"排队位置": 1, "预计等待": "2分钟", "夜间降级": True},
-            }
+        # human_transfer 已独立为人工通道（_route_human），此处不再处理
         return None
+
+    # ================= 人工转接通道（Module 9）=================
+    async def _route_human(
+        self, session: Session, intent_result: object, message: str
+    ) -> AsyncIterator[Dict]:
+        yield self._event("route", {"channel": "human", "intent": "human_transfer"})
+        ticket = human_service.create_ticket(
+            session.user_id, session.session_id, message, intent="human_transfer"
+        )
+        content = (
+            f"正在为您转接人工客服，请稍候...\n"
+            f"工单号：{ticket['ticket_id']}\n"
+            f"排队位置：第 {ticket['queue_position']} 位\n"
+            f"预计等待：{ticket['estimated_wait']}\n"
+            f"（服务时间 9:00-17:00，非服务时间会自动转为留言工单）"
+        )
+        extra = {
+            "ticket_id": ticket["ticket_id"],
+            "queue_position": ticket["queue_position"],
+            "estimated_wait": ticket["estimated_wait"],
+        }
+        yield self._event("token", {"content": content})
+        yield self._event("transfer", {
+            "ticket_id": ticket["ticket_id"],
+            "queue_position": ticket["queue_position"],
+        })
+        done = post_processor.finalize(
+            intent_result=intent_result, channel="human",
+            reply_type="transfer", answer=content, extra=extra,
+        )
+        yield self._event("done", done)
+        session.add("user", message)
+        session.add("assistant", content)
+
+    @staticmethod
+    def _clarify_text(message: str, options: List[str]) -> str:
+        """置信度低 / 多意图：给出澄清 + 候选选项（Module 4 识别兜底）"""
+        if not options:
+            return (
+                "抱歉，我没太理解您的需求。您可以问我：查书、预约座位、续借、"
+                "开放时间、知网使用等图书馆相关问题～"
+            )
+        labeled = "、".join(f"「{o}」" for o in options[:3])
+        return (
+            f"您是想咨询以下哪一类呢？{labeled}\n"
+            f"（也可以直接描述您的需求，比如「预约明天的自习室」「续借三体」）"
+        )
 
     # ================= 座位预约流程（含槽位填充）=================
     async def _seat_reserve_flow(
@@ -309,7 +402,8 @@ class ChatServiceV2:
 
         # 检查是否完成
         if state.is_complete():
-            # 槽位完成，进入确认阶段
+            # 槽位完成，进入展示/确认阶段（Module 5 Stage 模型）
+            state.stage = Stage.PRESENTING.value
             payload = {
                 "area": state.slots["area"].value,
                 "date": state.slots["date"].value,
@@ -439,33 +533,88 @@ class ChatServiceV2:
         action = confirm_result["action"]
         payload = confirm_result["payload"]
 
+        state = session.state
+        state.stage = Stage.COMMITTING.value
+
+        # 风险分级（Module 5.4）+ 幂等键（Module 5.5）
+        idem_key = None
+        risk_level = "low"
         if action == "seat_reserve":
-            result = seat_service.reserve(
-                payload["user_id"], payload["area"],
-                payload["date"], payload["start_time"],
-                payload["end_time"],
+            risk_level = grade_seat_risk(
+                payload.get("area", ""), payload.get("start_time", ""), payload.get("end_time", "")
+            ).value
+            state.risk_level = risk_level
+            idem_key = ":".join([
+                payload.get("user_id", ""), session.session_id,
+                payload.get("area", ""), payload.get("date", ""),
+                payload.get("start_time", ""), payload.get("end_time", ""),
+            ])
+            result = self._call_borrow(
+                seat_service.reserve,
+                payload["user_id"], payload["area"], payload["date"],
+                payload["start_time"], payload["end_time"],
+                idempotency_key=idem_key, risk_level=risk_level,
             )
             if result["ok"]:
-                content = f"✅ 预约成功！\n区域：{payload['area']}\n日期：{payload['date']}\n时间：{payload['start_time']} - {payload['end_time']}\n预约编号：{result['reservation']['reservation_id']}"
+                r = result["reservation"]
+                content = (
+                    f"✅ 预约成功！\n区域：{payload['area']}\n日期：{payload['date']}\n"
+                    f"时间：{payload['start_time']} - {payload['end_time']}\n"
+                    f"预约编号：{r['reservation_id']}\n风险等级：{risk_level}"
+                )
             else:
                 content = f"❌ 预约失败：{result['message']}"
 
         elif action == "renew":
-            result = user_service.renew(payload["user_id"], payload["book_id"])
+            fines = 0.0
+            try:
+                fines = float(user_service.get_borrow_info(payload["user_id"]).get("fines", 0) or 0)
+            except Exception:  # noqa: BLE001
+                fines = 0.0
+            risk_level = grade_renew_risk(fines=fines).value
+            state.risk_level = risk_level
+            idem_key = f"{payload.get('user_id', '')}:{session.session_id}:{payload.get('book_id', '')}"
+            result = self._call_borrow(
+                user_service.renew, payload["user_id"], payload["book_id"],
+                idempotency_key=idem_key,
+            )
             if result["ok"]:
-                content = f"✅ 续借成功！新到期日：{result.get('new_due', '')}"
+                content = f"✅ 续借成功！新到期日：{result.get('new_due', '')}（风险等级：{risk_level}）"
             else:
                 content = f"❌ 续借失败：{result['message']}"
         else:
+            result = {"ok": True, "message": "操作已执行", "result_type": "full_success"}
             content = "操作已执行。"
 
+        state.stage = Stage.DONE.value if result.get("ok") else Stage.ABORTED.value
+
         yield self._event("token", {"content": content})
-        yield self._event("done", {
-            "reply_type": "text",
-            "answer": content,
-            "action_result": result,
-        })
+        yield self._event("done", post_processor.finalize(
+            intent_result=None, channel="business", reply_type="text",
+            answer=content, action_result=result,
+        ))
         session.add("assistant", content)
+
+    @staticmethod
+    def _call_borrow(func, *args, **kwargs) -> Dict:
+        """包裹借阅系统调用：熔断器保护（Module 2.7）"""
+        if borrow_breaker.is_open():
+            return {
+                "ok": False,
+                "message": "借阅系统暂时不可用，请稍后重试",
+                "result_type": "retryable_failure",
+            }
+        try:
+            result = func(*args, **kwargs)
+            borrow_breaker.record_success()
+            return result
+        except Exception as exc:  # noqa: BLE001
+            borrow_breaker.record_failure()
+            return {
+                "ok": False,
+                "message": f"借阅系统异常：{exc}",
+                "result_type": "retryable_failure",
+            }
 
     # ================= 槽位填充处理 =================
     async def _fill_slots(
@@ -561,19 +710,27 @@ class ChatServiceV2:
         messages = self._build_chat_messages(history, message)
 
         answer: Optional[str] = None
-        try:
-            parts: List[str] = []
-            async for delta in llm_client.chat_stream(messages):
-                parts.append(delta)
-                yield self._event("token", {"content": delta})
-            if parts:
-                answer = "".join(parts)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("闲聊通道 LLM 流式失败，降级非流式：%s", exc)
-            answer = await llm_client.chat(messages)
-            if answer:
-                for piece in chunk_text(answer, size=12):
-                    yield self._event("token", {"content": piece})
+
+        # 大模型熔断（Module 2.7）：打开则直接降级，不调用 LLM
+        if not llm_client.enabled or llm_breaker.is_open():
+            answer = None
+        else:
+            try:
+                parts: List[str] = []
+                async for delta in llm_client.chat_stream(messages):
+                    parts.append(delta)
+                    yield self._event("token", {"content": delta})
+                if parts:
+                    answer = "".join(parts)
+                    llm_breaker.record_success()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("闲聊通道 LLM 流式失败，降级非流式：%s", exc)
+                try:
+                    answer = await llm_client.chat(messages)
+                    llm_breaker.record_success()
+                except Exception:  # noqa: BLE001
+                    llm_breaker.record_failure()
+                    answer = None
 
         if not answer:
             answer = (
@@ -583,11 +740,9 @@ class ChatServiceV2:
             for piece in chunk_text(answer, size=12):
                 yield self._event("token", {"content": piece})
 
-        yield self._event("done", {
-            "reply_type": "text",
-            "answer": answer,
-            "channel": "chat_llm",
-        })
+        yield self._event("done", post_processor.finalize(
+            intent_result=None, channel="chat_llm", reply_type="text", answer=answer,
+        ))
         session.add("user", message)
         session.add("assistant", answer)
 
@@ -609,9 +764,10 @@ class ChatServiceV2:
 
     # ================= FAQ 通道 =================
     async def _route_faq(
-        self, session: Session, intent: str, message: str, context: Dict
+        self, session: Session, intent_result: object, message: str, context: Dict
     ) -> AsyncIterator[Dict]:
-        yield self._event("route", {"channel": "faq_fast", "intent": intent})
+        _intent = intent_result.intent if intent_result else "unknown"
+        yield self._event("route", {"channel": "faq_fast", "intent": _intent})
 
         # 语义缓存查找
         cached = faq_cache.lookup(message)
@@ -620,27 +776,34 @@ class ChatServiceV2:
             yield self._event("token", {"content": answer})
             if sources:
                 yield self._event("sources", {"documents": sources})
-            yield self._event("done", {
-                "reply_type": "text",
-                "answer": answer,
-                "sources": sources,
-                "cache_hit": True,
-            })
+            yield self._event("done", post_processor.finalize(
+                intent_result=intent_result, channel="faq", reply_type="text",
+                answer=answer, sources=sources,
+            ))
             session.add("assistant", answer)
             return
 
         # FAQ 快速命中
         faq_reply = self._faq_fast_match(message)
         if faq_reply:
-            faq_cache.store(message, faq_reply["content"], faq_reply.get("sources"))
-            async for ev in self._stream_reply(faq_reply, channel="faq_fast"):
-                yield ev
-            session.add("assistant", faq_reply["content"])
+            content = faq_reply["content"]
+            sources = faq_reply.get("sources")
+            faq_cache.store(message, content, sources)
+            done = post_processor.finalize(
+                intent_result=intent_result, channel="faq", reply_type="text",
+                answer=content, sources=sources,
+            )
+            for piece in chunk_text(content, size=12):
+                yield self._event("token", {"content": piece})
+            if sources:
+                yield self._event("sources", {"documents": sources})
+            yield self._event("done", done)
+            session.add("assistant", content)
             return
 
         # 降级到 RAG
         history = session.history()
-        async for ev in self._route_rag(session, message, history, context):
+        async for ev in self._route_rag(session, intent_result, message, history, context):
             yield ev
 
     def _faq_fast_match(self, message: str) -> Optional[Dict]:
@@ -678,7 +841,7 @@ class ChatServiceV2:
 
     # ================= RAG 通道 =================
     async def _route_rag(
-        self, session: Session, message: str, history: List[Dict],
+        self, session: Session, intent_result: object, message: str, history: List[Dict],
         context: Dict
     ) -> AsyncIterator[Dict]:
         yield self._event("route", {"channel": "rag"})
@@ -706,13 +869,10 @@ class ChatServiceV2:
         for piece in chunk_text(answer, size=12):
             yield self._event("token", {"content": piece})
         yield self._event("sources", {"documents": sources})
-        yield self._event("done", {
-                "reply_type": "text",
-                "answer": answer,
-                "sources": sources,
-                "low_confidence": low_confidence,
-                "channel": "rag",
-            })
+        yield self._event("done", post_processor.finalize(
+            intent_result=intent_result, channel="rag", reply_type="text",
+            answer=answer, sources=sources, low_confidence=low_confidence,
+        ))
         session.add("user", message)
         session.add("assistant", answer)
 

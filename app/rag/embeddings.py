@@ -1,12 +1,13 @@
-"""Embedding 模块：稀疏（字符 n-gram + TF-IDF）与稠密（BGE / sentence-transformers）双实现
+"""Embedding 模块：稀疏（字符 n-gram + TF-IDF）与稠密（BGE-M3 / sentence-transformers）双实现
 
 设计要点（面试可讲）：
 - 统一接口：fit / embed / embed_batch / embed_query / similarity，
   RAG 上层（Retriever、VectorStore）完全不感知底层是稀疏还是稠密向量
 - 稀疏实现：中文不做分词，用「单字 + 相邻双字 n-gram」作特征项 + TF-IDF 加权，
-  零外部依赖、冷启动毫秒级；适合小知识库、离线演示与 CI 环境
-- 稠密实现：BAAI/bge-large-zh-v1.5（1024 维），中文语义匹配强，可召回同义改写；
-  查询侧追加 bge 官方检索指令前缀，与文档侧向量保持同一语义空间
+  零外部依赖、冷启动毫秒级；作为 sentence-transformers/torch 缺失时的离线兜底
+- 稠密实现（默认）：BAAI/bge-m3（1024 维，中英双语、检索 SOTA 级），可召回同义改写；
+  查询侧追加 bge 官方检索指令前缀，与文档侧向量保持同一语义空间；
+  bge-m3 还自带稀疏表征，可与 BM25 一路构成混合检索（见 retriever.py）
 - 两种实现通过 EMBEDDING_MODE 一键切换，构成 A/B 对比评测的实验变量
 """
 import math
@@ -155,9 +156,9 @@ class NgramTfidfEmbedder(BaseEmbedder):
 
 
 class SentenceTransformerEmbedder(BaseEmbedder):
-    """稠密 Embedding：BGE / sentence-transformers 系列模型
+    """稠密 Embedding：BGE-M3 / sentence-transformers 系列模型
 
-    默认 BAAI/bge-large-zh-v1.5（1024 维，中文检索 SOTA 级别，模型约 1.3GB）。
+    默认 BAAI/bge-m3（1024 维，中英双语、检索 SOTA 级，模型约 2.2GB）。
     机器资源有限时可改用 BAAI/bge-small-zh-v1.5（512 维，约 100MB）。
 
     查询侧前缀是 bge 系列的官方建议：短查询加指令前缀后与长文档处于同一语义空间，
@@ -223,19 +224,28 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         return [_as_list(v) for v in vectors]
 
 
-def create_embedder(mode: str = "ngram", **kwargs) -> BaseEmbedder:
+_DENSE_UNAVAILABLE = False
+
+
+def create_embedder(mode: str = "external", **kwargs) -> BaseEmbedder:
     """工厂方法：按配置创建嵌入器
 
-    ngram    → 零依赖稀疏 TF-IDF（默认，开箱即用）
-    external → 稠密 BGE 模型；依赖缺失或初始化失败时自动回退到 ngram，
+    external → 稠密 BGE-M3 模型（默认，检索质量最佳）；依赖缺失或初始化失败时自动回退到 ngram
+    ngram    → 零依赖稀疏 TF-IDF（sentence-transformers/torch 缺失时的离线兜底）
                保证服务始终可用（与服务降级策略一致）
+
+    失败结果会进程级缓存：离线环境下每次新建嵌入器都去拉模型会把启动/首请求拖到几十秒。
     """
+    global _DENSE_UNAVAILABLE
     from ..core.logger import logger
 
     mode = (mode or "ngram").strip().lower()
     if mode in ("external", "dense", "bge", "sentence-transformers"):
+        if _DENSE_UNAVAILABLE:
+            return NgramTfidfEmbedder()
         try:
             return SentenceTransformerEmbedder(**kwargs)
         except Exception as exc:  # noqa: BLE001
+            _DENSE_UNAVAILABLE = True
             logger.warning("稠密 Embedding 初始化失败，回退到稀疏 n-gram 模式：%s", exc)
     return NgramTfidfEmbedder()

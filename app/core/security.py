@@ -52,21 +52,47 @@ _SENSITIVE_PATTERNS = [
 
 
 class SecurityGuard:
-    """安全守卫：注入检测 + 敏感数据脱敏"""
+    """安全守卫：注入检测 + 敏感数据脱敏
+
+    注入检测已升级为 Module 3.1 的四层流水线（app/core/guard/），本类保持旧接口不变：
+        L1 正则（多视图去混淆）→ L2 语义向量 → L3 分类器 → L4 大模型复核
+    返回结构在旧字段（blocked/matched_pattern/severity/message）基础上追加
+    layer/category/confidence/latency_ms/layers，调用方无需改动。
+    """
 
     def __init__(self):
         self._blocked_count = 0
 
     def check_injection(self, text: str) -> Dict:
         """
-        检测用户输入是否包含注入指令
-        
+        检测用户输入是否包含注入指令（四层流水线统一裁决）
+
         返回: {
             "blocked": bool,
             "matched_pattern": str | None,
             "severity": "low" | "medium" | "high",
+            "message": str,
+            "layer": "L0"|"L1"|"L2"|"L3"|"L4",   # 命中层
+            "category": 攻击类别 | None,
+            "confidence": float,
+            "latency_ms": float,
         }
         """
+        try:
+            from .guard import get_pipeline
+
+            res = get_pipeline().evaluate(text)
+            if res.get("blocked"):
+                self._blocked_count += 1
+                logger.warning("安全守卫拦截 layer=%s category=%s",
+                               res.get("layer"), res.get("category"))
+            return res
+        except Exception as exc:  # noqa: BLE001  资产/模型异常时退回 L1 正则，守卫不能整体失效
+            logger.warning("四层守卫不可用，回退单层正则：%s", exc)
+            return self._legacy_check(text)
+
+    def _legacy_check(self, text: str) -> Dict:
+        """降级路径：仅 L1 正则 + 长度/重复字符（原实现，保留兜底能力）"""
         for pattern in _COMPILED_PATTERNS:
             match = pattern.search(text)
             if match:
@@ -77,6 +103,7 @@ class SecurityGuard:
                     "blocked": True,
                     "matched_pattern": matched,
                     "severity": "high",
+                    "layer": "L1",
                     "message": "您的问题包含可疑内容，已被安全系统拦截。如有正常需求请换个方式提问。",
                 }
 
@@ -86,6 +113,7 @@ class SecurityGuard:
                 "blocked": True,
                 "matched_pattern": "too_long",
                 "severity": "medium",
+                "layer": "L0",
                 "message": "输入过长（超过 2000 字符），请精简您的问题。",
             }
 
@@ -95,10 +123,11 @@ class SecurityGuard:
                 "blocked": True,
                 "matched_pattern": "repeated_chars",
                 "severity": "medium",
+                "layer": "L0",
                 "message": "输入包含大量重复字符，请检查后重试。",
             }
 
-        return {"blocked": False, "matched_pattern": None, "severity": "low"}
+        return {"blocked": False, "matched_pattern": None, "severity": "low", "layer": None}
 
     def sanitize_input(self, text: str) -> str:
         """输入清洗：去除控制字符、限制长度"""

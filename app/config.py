@@ -89,10 +89,12 @@ class Settings:
     )
 
     # ---- RAG ----
-    # Embedding：ngram(零依赖稀疏 TF-IDF) | external(稠密 BGE / sentence-transformers)
-    EMBEDDING_MODE: str = os.getenv("EMBEDDING_MODE", "ngram")
-    # 稠密模型配置：资源有限时可换 BAAI/bge-small-zh-v1.5（约 100MB）
-    EMBEDDING_MODEL_NAME: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-large-zh-v1.5")
+    # Embedding：ngram(零依赖稀疏 TF-IDF 兜底) | external(稠密 BGE-M3 / sentence-transformers)
+    # 默认启用稠密 BGE-M3；sentence-transformers/torch 缺失时自动回退到 ngram（保持开箱即用）
+    EMBEDDING_MODE: str = os.getenv("EMBEDDING_MODE", "external")
+    # 稠密模型：BAAI/bge-m3（1024 维，中英双语 + 自带稀疏表征，检索 SOTA 级）
+    # 资源极有限时可换 BAAI/bge-small-zh-v1.5（512 维，约 100MB）
+    EMBEDDING_MODEL_NAME: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
     EMBEDDING_DEVICE: str = os.getenv("EMBEDDING_DEVICE", "cpu")
     EMBEDDING_BATCH_SIZE: int = int(os.getenv("EMBEDDING_BATCH_SIZE", "32"))
     # bge 系列官方建议：查询侧加指令前缀，与文档侧保持同一语义空间
@@ -100,8 +102,8 @@ class Settings:
         "EMBEDDING_QUERY_PREFIX", "为这个句子生成表示以用于检索相关文章："
     )
 
-    # 向量库：memory(进程内稀疏索引) | chroma(持久化稠密索引)
-    VECTOR_STORE_MODE: str = os.getenv("VECTOR_STORE_MODE", "memory")
+    # 向量库：chroma(持久化稠密索引, 默认) | memory(进程内稀疏索引, 零依赖回退)
+    VECTOR_STORE_MODE: str = os.getenv("VECTOR_STORE_MODE", "chroma")
     CHROMA_PERSIST_DIR: str = os.getenv(
         "CHROMA_PERSIST_DIR", str(BASE_DIR / "data" / "chroma")
     )
@@ -116,6 +118,22 @@ class Settings:
     RERANKER_ENABLED: bool = os.getenv("RERANKER_ENABLED", "false").lower() == "true"
     RERANKER_MODEL: str = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-large")
     RERANKER_BATCH_SIZE: int = int(os.getenv("RERANKER_BATCH_SIZE", "32"))
+
+    # ---- 混合检索（BM25 稀疏关键词召回 + BGE-M3 稠密语义召回，双路融合）----
+    # 对应需求 v2 3.1 Step2「混合检索」：纯向量打不中 ISBN/缩写/专有名词，纯 BM25 抓不住同义改写，
+    # 两路互补最稳。BM25 依赖缺失时自动降级为纯稠密检索。
+    HYBRID_RETRIEVAL_ENABLED: bool = os.getenv("HYBRID_RETRIEVAL_ENABLED", "true").lower() == "true"
+    BM25_ENABLED: bool = os.getenv("BM25_ENABLED", "true").lower() == "true"
+    # 融合方式：rrf(Reciprocal Rank Fusion, k=60，只看排名不受分数尺度污染，默认) | weighted(加权求和)
+    HYBRID_FUSION_METHOD: str = os.getenv("HYBRID_FUSION_METHOD", "rrf")
+    RRF_K: int = int(os.getenv("RRF_K", "60"))
+    # 加权融合时的两路权重（需各自归一化后相加，默认稠密为主、BM25 为辅）
+    HYBRID_DENSE_WEIGHT: float = float(os.getenv("HYBRID_DENSE_WEIGHT", "0.6"))
+    HYBRID_BM25_WEIGHT: float = float(os.getenv("HYBRID_BM25_WEIGHT", "0.4"))
+    # 每路召回的候选池大小（融合前先各取 Top-K 候选，再排名融合）
+    BM25_CANDIDATE_K: int = int(os.getenv("BM25_CANDIDATE_K", "20"))
+    BM25_K1: float = float(os.getenv("BM25_K1", "1.5"))
+    BM25_B: float = float(os.getenv("BM25_B", "0.75"))
 
     # ---- 自适应分块策略（对应 v2 3.2.1：按文档类型选择分块参数）----
     CHUNK_STRATEGY: dict = {
@@ -159,6 +177,20 @@ class Settings:
     RATE_LIMIT_PER_USER: int = int(os.getenv("RATE_LIMIT_PER_USER", "30"))
     RATE_LIMIT_PER_IP: int = int(os.getenv("RATE_LIMIT_PER_IP", "100"))
     RATE_LIMIT_WINDOW_SECONDS: int = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
+
+    # ---- 熔断降级（Module 2.7：大模型 / 知识库 / 借阅系统）----
+    CIRCUIT_BREAKER_ENABLED: bool = os.getenv("CIRCUIT_BREAKER_ENABLED", "true").lower() == "true"
+    CB_LLM_FAILURE_THRESHOLD: int = int(os.getenv("CB_LLM_FAILURE_THRESHOLD", "5"))
+    CB_LLM_RECOVERY_SECONDS: int = int(os.getenv("CB_LLM_RECOVERY_SECONDS", "30"))
+    CB_KB_FAILURE_THRESHOLD: int = int(os.getenv("CB_KB_FAILURE_THRESHOLD", "5"))
+    CB_KB_RECOVERY_SECONDS: int = int(os.getenv("CB_KB_RECOVERY_SECONDS", "30"))
+    CB_BORROW_FAILURE_THRESHOLD: int = int(os.getenv("CB_BORROW_FAILURE_THRESHOLD", "3"))
+    CB_BORROW_RECOVERY_SECONDS: int = int(os.getenv("CB_BORROW_RECOVERY_SECONDS", "20"))
+
+    # ---- 路由 / 澄清（Module 4：置信度校准）----
+    # 置信度 < CLARIFY 且非 unknown → 澄清 + 候选选项；< FALLBACK → 直接兜底
+    CLARIFY_CONFIDENCE_THRESHOLD: float = float(os.getenv("CLARIFY_CONFIDENCE_THRESHOLD", "0.6"))
+    FALLBACK_CONFIDENCE_THRESHOLD: float = float(os.getenv("FALLBACK_CONFIDENCE_THRESHOLD", "0.3"))
 
     # ---- 数据目录 ----
     DATA_DIR: Path = BASE_DIR / "data"

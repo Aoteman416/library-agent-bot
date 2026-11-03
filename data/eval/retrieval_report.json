@@ -1,0 +1,479 @@
+[
+  {
+    "label": "纯稀疏-ngramTFIDF",
+    "num_cases": 1947,
+    "metrics": {
+      "1": {
+        "recall@1": 0.8295,
+        "precision@1": 0.8295,
+        "hit_rate@1": 0.8295,
+        "keyword_hit_rate@1": 0.923,
+        "mrr": 0.8295,
+        "ndcg@1": 0.8295
+      },
+      "3": {
+        "recall@3": 0.9712,
+        "precision@3": 0.3237,
+        "hit_rate@3": 0.9712,
+        "keyword_hit_rate@3": 0.982,
+        "mrr": 0.8955,
+        "ndcg@3": 0.9151
+      },
+      "5": {
+        "recall@5": 0.9892,
+        "precision@5": 0.1978,
+        "hit_rate@5": 0.9892,
+        "keyword_hit_rate@5": 0.9933,
+        "mrr": 0.8998,
+        "ndcg@5": 0.9226
+      }
+    },
+    "failures": [
+      {
+        "id": 73,
+        "query": "非本校学生能进图书馆吗",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "开放时间与办证.md#办证方法",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 228,
+        "query": "要是忘记了还书时间怎么办？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "馆内设施与导航.md#还书方式",
+        "expected": "借阅规则.md#借阅期限"
+      },
+      {
+        "id": 381,
+        "query": "图书能带出去吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "馆内设施与导航.md#馆内规则",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 503,
+        "query": "总服务台在哪层？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "开放时间与办证.md#办证方法",
+        "expected": "馆内设施与导航.md#馆内布局"
+      },
+      {
+        "id": 514,
+        "query": "一楼有哪些服务？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "馆内设施与导航.md#总服务台",
+        "expected": "馆内设施与导航.md#馆内布局"
+      },
+      {
+        "id": 599,
+        "query": "一个学期能借多少书？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "资源使用.md#论文查重",
+        "expected": "借阅规则.md#借阅数量"
+      },
+      {
+        "id": 844,
+        "query": "如何了解图书是否能直接借阅？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "借阅规则.md#借阅数量",
+        "expected": "借阅规则.md#读者荐购"
+      },
+      {
+        "id": 922,
+        "query": "哪些楼层可以使用？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "资源使用.md#VPN设置",
+        "expected": "开放时间与办证.md#寒暑假开放时间"
+      },
+      {
+        "id": 1021,
+        "query": "我可以带上饭馆吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "馆内设施与导航.md#馆内规则",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 1037,
+        "query": "可以自带书进去看书吗？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "馆内设施与导航.md#馆内规则",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 1047,
+        "query": "访问图书馆可以借书吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "资源使用.md#数据库与电子期刊",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 1058,
+        "query": "我可以拿书出馆吗？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "资源使用.md#论文查重",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 1339,
+        "query": "需要什么软件？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "借阅规则.md#读者荐购",
+        "expected": "资源使用.md#VPN设置"
+      },
+      {
+        "id": 1371,
+        "query": "图书馆的总服务台在哪一层？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "借阅规则.md#遗失赔偿",
+        "expected": "馆内设施与导航.md#馆内布局"
+      },
+      {
+        "id": 1397,
+        "query": "1楼有总服务台吗？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "馆内设施与导航.md#总服务台",
+        "expected": "馆内设施与导航.md#馆内布局"
+      },
+      {
+        "id": 1503,
+        "query": "总服务台什么时候开放？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "开放时间与办证.md#寒暑假开放时间",
+        "expected": "馆内设施与导航.md#还书方式"
+      },
+      {
+        "id": 1521,
+        "query": "忘记带卡了怎么办？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "开放时间与办证.md#办证方法",
+        "expected": "馆内设施与导航.md#还书方式"
+      },
+      {
+        "id": 1545,
+        "query": "如何上网？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "资源使用.md#中国知网使用",
+        "expected": "馆内设施与导航.md#馆内规则"
+      },
+      {
+        "id": 1565,
+        "query": "不能在图书馆吃东西吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "借阅规则.md#续借规则",
+        "expected": "馆内设施与导航.md#馆内规则"
+      },
+      {
+        "id": 1567,
+        "query": "图书馆里面可以有声响吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "借阅规则.md#续借规则",
+        "expected": "馆内设施与导航.md#馆内规则"
+      },
+      {
+        "id": 1572,
+        "query": "如果在图书馆发现有人吃东西怎么办？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "借阅规则.md#续借规则",
+        "expected": "馆内设施与导航.md#馆内规则"
+      }
+    ]
+  },
+  {
+    "label": "BM25融合-ngram+BM25",
+    "num_cases": 1947,
+    "metrics": {
+      "1": {
+        "recall@1": 0.8233,
+        "precision@1": 0.8233,
+        "hit_rate@1": 0.8233,
+        "keyword_hit_rate@1": 0.9122,
+        "mrr": 0.8233,
+        "ndcg@1": 0.8233
+      },
+      "3": {
+        "recall@3": 0.9574,
+        "precision@3": 0.3191,
+        "hit_rate@3": 0.9574,
+        "keyword_hit_rate@3": 0.9759,
+        "mrr": 0.885,
+        "ndcg@3": 0.9037
+      },
+      "5": {
+        "recall@5": 0.9856,
+        "precision@5": 0.1971,
+        "hit_rate@5": 0.9856,
+        "keyword_hit_rate@5": 0.9902,
+        "mrr": 0.8916,
+        "ndcg@5": 0.9155
+      }
+    },
+    "failures": [
+      {
+        "id": 73,
+        "query": "非本校学生能进图书馆吗",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "开放时间与办证.md#办证方法",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 228,
+        "query": "要是忘记了还书时间怎么办？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "开放时间与办证.md#开放时间",
+        "expected": "借阅规则.md#借阅期限"
+      },
+      {
+        "id": 381,
+        "query": "图书能带出去吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "借阅规则.md#借阅数量",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 503,
+        "query": "总服务台在哪层？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "开放时间与办证.md#办证方法",
+        "expected": "馆内设施与导航.md#馆内布局"
+      },
+      {
+        "id": 514,
+        "query": "一楼有哪些服务？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "馆内设施与导航.md#总服务台",
+        "expected": "馆内设施与导航.md#馆内布局"
+      },
+      {
+        "id": 523,
+        "query": "总服务台是什么时候开放的？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "开放时间与办证.md#寒暑假开放时间",
+        "expected": "馆内设施与导航.md#总服务台"
+      },
+      {
+        "id": 599,
+        "query": "一个学期能借多少书？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "借阅规则.md#续借规则",
+        "expected": "借阅规则.md#借阅数量"
+      },
+      {
+        "id": 607,
+        "query": "本科学术成果中使用了多少本书？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "开放时间与办证.md#办证方法",
+        "expected": "借阅规则.md#借阅数量"
+      },
+      {
+        "id": 676,
+        "query": "学生到期后还能再借几天？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "借阅规则.md#续借规则",
+        "expected": "借阅规则.md#借阅期限"
+      },
+      {
+        "id": 844,
+        "query": "如何了解图书是否能直接借阅？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "借阅规则.md#借阅数量",
+        "expected": "借阅规则.md#读者荐购"
+      },
+      {
+        "id": 922,
+        "query": "哪些楼层可以使用？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "资源使用.md#VPN设置",
+        "expected": "开放时间与办证.md#寒暑假开放时间"
+      },
+      {
+        "id": 1021,
+        "query": "我可以带上饭馆吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "馆内设施与导航.md#馆内规则",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 1037,
+        "query": "可以自带书进去看书吗？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "馆内设施与导航.md#馆内规则",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 1047,
+        "query": "访问图书馆可以借书吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "资源使用.md#数据库与电子期刊",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 1058,
+        "query": "我可以拿书出馆吗？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "资源使用.md#论文查重",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 1065,
+        "query": "图书馆外来的可以进吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "资源使用.md#数据库与电子期刊",
+        "expected": "开放时间与办证.md#校外访客"
+      },
+      {
+        "id": 1244,
+        "query": "如何在家中浏览图书馆的资源？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "资源使用.md#中国知网使用",
+        "expected": "资源使用.md#数据库与电子期刊"
+      },
+      {
+        "id": 1339,
+        "query": "需要什么软件？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "借阅规则.md#读者荐购",
+        "expected": "资源使用.md#VPN设置"
+      },
+      {
+        "id": 1371,
+        "query": "图书馆的总服务台在哪一层？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "开放时间与办证.md#办证方法",
+        "expected": "馆内设施与导航.md#馆内布局"
+      },
+      {
+        "id": 1409,
+        "query": "2楼提供什么服务？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "资源使用.md#论文查重",
+        "expected": "馆内设施与导航.md#馆内布局"
+      },
+      {
+        "id": 1503,
+        "query": "总服务台什么时候开放？",
+        "hit": false,
+        "keyword_hit": true,
+        "top1": "开放时间与办证.md#寒暑假开放时间",
+        "expected": "馆内设施与导航.md#还书方式"
+      },
+      {
+        "id": 1521,
+        "query": "忘记带卡了怎么办？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "开放时间与办证.md#办证方法",
+        "expected": "馆内设施与导航.md#还书方式"
+      },
+      {
+        "id": 1545,
+        "query": "如何上网？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "资源使用.md#中国知网使用",
+        "expected": "馆内设施与导航.md#馆内规则"
+      },
+      {
+        "id": 1565,
+        "query": "不能在图书馆吃东西吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "借阅规则.md#续借规则",
+        "expected": "馆内设施与导航.md#馆内规则"
+      },
+      {
+        "id": 1567,
+        "query": "图书馆里面可以有声响吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "资源使用.md#数据库与电子期刊",
+        "expected": "馆内设施与导航.md#馆内规则"
+      },
+      {
+        "id": 1572,
+        "query": "如果在图书馆发现有人吃东西怎么办？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "借阅规则.md#续借规则",
+        "expected": "馆内设施与导航.md#馆内规则"
+      },
+      {
+        "id": 1684,
+        "query": "我想在周六晚上归还书，图书馆会开门吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "馆内设施与导航.md#还书方式",
+        "expected": "开放时间与办证.md#开放时间"
+      },
+      {
+        "id": 1772,
+        "query": "我们这里的网可以免费下文献吗？",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "资源使用.md#论文查重",
+        "expected": "资源使用.md#中国知网使用"
+      }
+    ]
+  },
+  {
+    "label": "纯稠密-BGE",
+    "metrics": {},
+    "failures": [],
+    "env_blocked": true,
+    "note": "需 BAAI/bge-m3 或 bge-small + bge-reranker-v2-m3，本环境 HuggingFace 不可达"
+  },
+  {
+    "label": "混合-BGE+BM25",
+    "metrics": {},
+    "failures": [],
+    "env_blocked": true,
+    "note": "需 BAAI/bge-m3 或 bge-small + bge-reranker-v2-m3，本环境 HuggingFace 不可达"
+  },
+  {
+    "label": "重排-混合+CrossEncoder",
+    "metrics": {},
+    "failures": [],
+    "env_blocked": true,
+    "note": "需 BAAI/bge-m3 或 bge-small + bge-reranker-v2-m3，本环境 HuggingFace 不可达"
+  }
+]

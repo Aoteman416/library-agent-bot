@@ -1,0 +1,9 @@
+{
+  "serial_idempotency_pass": true,
+  "concurrency_race_rate_real": 0.0,
+  "concurrency_race_rate_stress": 0.2125,
+  "batch_receipt_correct": true,
+  "optimistic_lock_rate": 0.0,
+  "trials": 80,
+  "threads": 20
+}

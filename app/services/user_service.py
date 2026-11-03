@@ -60,13 +60,13 @@ class UserService:
         }
 
     def renew(self, user_id: str, book_id: str) -> Dict:
-        """续借"""
+        """续借（事务化：返回 result_type）"""
         borrows = MOCK_BORROWS.get(user_id, [])
         book = next((b for b in borrows if book_id in b["book_id"] or book_id in b["title"]), None)
         if book is None:
-            return {"ok": False, "message": "未找到该书的借阅记录。"}
+            return {"ok": False, "message": "未找到该书的借阅记录。", "result_type": "non_retryable_failure"}
         if book["renew_count"] >= 1:
-            return {"ok": False, "message": "该书已续借过，无法再次续借。"}
+            return {"ok": False, "message": "该书已续借过，无法再次续借。", "result_type": "non_retryable_failure"}
         book["renew_count"] += 1
         from datetime import date, timedelta
         due = date.fromisoformat(book["due"]) + timedelta(days=30)
@@ -75,6 +75,7 @@ class UserService:
             "ok": True,
             "message": f"《{book['title']}》续借成功，新到期日 {book['due']}。",
             "new_due": book["due"],
+            "result_type": "full_success",
         }
 
 

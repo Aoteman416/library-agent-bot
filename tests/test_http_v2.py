@@ -63,7 +63,7 @@ check("触发登录引导", r["data"].get("reply_type") == "login_required")
 
 # 5. 登录
 print("\n=== 5. 登录 ===")
-r = c.post("/api/v1/chat/login", json={"user_id": "2024001", "password": "123456"}).json()
+r = c.post("/api/v1/user/login", json={"user_id": "2024001", "password": "123456"}).json()
 check("登录成功", r["code"] == 0, f"user={r['data'].get('user_id')}")
 
 # 6. 登录用户查借阅

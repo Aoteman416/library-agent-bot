@@ -1,0 +1,155 @@
+{
+  "num_cases": 2000,
+  "accuracy": 0.622,
+  "macro_f1": 0.6536,
+  "true_unknown_rate": 0.125,
+  "pred_unknown_rate": 0.4025,
+  "per_class": {
+    "seat_reserve": {
+      "precision": 0.9887,
+      "recall": 0.7,
+      "f1": 0.8197,
+      "tp": 175,
+      "fp": 2,
+      "fn": 75
+    },
+    "borrow_manage": {
+      "precision": 0.8,
+      "recall": 0.608,
+      "f1": 0.6909,
+      "tp": 152,
+      "fp": 38,
+      "fn": 98
+    },
+    "book_search": {
+      "precision": 0.7778,
+      "recall": 0.42,
+      "f1": 0.5455,
+      "tp": 105,
+      "fp": 30,
+      "fn": 145
+    },
+    "human_transfer": {
+      "precision": 0.987,
+      "recall": 0.608,
+      "f1": 0.7525,
+      "tp": 152,
+      "fp": 2,
+      "fn": 98
+    },
+    "policy_faq": {
+      "precision": 0.9776,
+      "recall": 0.524,
+      "f1": 0.6823,
+      "tp": 131,
+      "fp": 3,
+      "fn": 119
+    },
+    "resource_guide": {
+      "precision": 0.9578,
+      "recall": 0.636,
+      "f1": 0.7644,
+      "tp": 159,
+      "fp": 7,
+      "fn": 91
+    },
+    "navigation": {
+      "precision": 0.5188,
+      "recall": 0.496,
+      "f1": 0.5072,
+      "tp": 124,
+      "fp": 115,
+      "fn": 126
+    },
+    "unknown": {
+      "precision": 0.3056,
+      "recall": 0.984,
+      "f1": 0.4664,
+      "tp": 246,
+      "fp": 559,
+      "fn": 4
+    }
+  },
+  "confusion_matrix": {
+    "seat_reserve": {
+      "seat_reserve": 175,
+      "borrow_manage": 0,
+      "book_search": 3,
+      "human_transfer": 0,
+      "policy_faq": 0,
+      "resource_guide": 0,
+      "navigation": 43,
+      "unknown": 29
+    },
+    "borrow_manage": {
+      "seat_reserve": 0,
+      "borrow_manage": 152,
+      "book_search": 16,
+      "human_transfer": 0,
+      "policy_faq": 0,
+      "resource_guide": 0,
+      "navigation": 5,
+      "unknown": 77
+    },
+    "book_search": {
+      "seat_reserve": 0,
+      "borrow_manage": 12,
+      "book_search": 105,
+      "human_transfer": 1,
+      "policy_faq": 1,
+      "resource_guide": 6,
+      "navigation": 40,
+      "unknown": 85
+    },
+    "human_transfer": {
+      "seat_reserve": 2,
+      "borrow_manage": 0,
+      "book_search": 5,
+      "human_transfer": 152,
+      "policy_faq": 1,
+      "resource_guide": 0,
+      "navigation": 3,
+      "unknown": 87
+    },
+    "policy_faq": {
+      "seat_reserve": 0,
+      "borrow_manage": 10,
+      "book_search": 0,
+      "human_transfer": 0,
+      "policy_faq": 131,
+      "resource_guide": 1,
+      "navigation": 1,
+      "unknown": 107
+    },
+    "resource_guide": {
+      "seat_reserve": 0,
+      "borrow_manage": 0,
+      "book_search": 0,
+      "human_transfer": 0,
+      "policy_faq": 0,
+      "resource_guide": 159,
+      "navigation": 22,
+      "unknown": 69
+    },
+    "navigation": {
+      "seat_reserve": 0,
+      "borrow_manage": 16,
+      "book_search": 5,
+      "human_transfer": 0,
+      "policy_faq": 0,
+      "resource_guide": 0,
+      "navigation": 124,
+      "unknown": 105
+    },
+    "unknown": {
+      "seat_reserve": 0,
+      "borrow_manage": 0,
+      "book_search": 1,
+      "human_transfer": 1,
+      "policy_faq": 1,
+      "resource_guide": 0,
+      "navigation": 1,
+      "unknown": 246
+    }
+  }
+}

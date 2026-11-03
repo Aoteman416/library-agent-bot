@@ -13,6 +13,7 @@
 """
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from enum import Enum
 from typing import Dict, List, Optional
 
 
@@ -38,6 +39,71 @@ RENEW_SLOTS = {
 }
 
 
+# ================= 阶段模型（Module 5：替代两态判断）=================
+class Stage(str, Enum):
+    """业务通道完整生命周期阶段（不另设 SLOT_COLLECTION 阶段，约束收集贯穿 EXPLORING/PRESENTING）"""
+    EXPLORING = "exploring"        # 探索 / 收敛约束
+    SEARCHING = "searching"        # 搜索（瞬态）
+    PRESENTING = "presenting"      # 展示候选待选
+    COMMITTING = "committing"      # 事务提交
+    COMMITTED = "committed"        # 提交完成待确认
+    DONE = "done"                  # 完成返回凭证
+    ABORTED = "aborted"            # 取消 / 超时清理
+
+
+# ================= 风险分级（Module 5.4：配置化，不硬编码）=================
+class RiskLevel(str, Enum):
+    LOW = "low"        # 直接提交，事后可撤销，不需显式确认
+    MEDIUM = "medium"  # 展示确认摘要后提交
+    HIGH = "high"      # 显式确认 + 二次验证
+
+
+def _parse_duration(start_time: str, end_time: str) -> float:
+    """解析 'HH:MM' 时长（小时），解析失败返回默认 2h"""
+    try:
+        sh, sm = int(start_time[:2]), int(start_time[3:5])
+        eh, em = int(end_time[:2]), int(end_time[3:5])
+        mins = (eh * 60 + em) - (sh * 60 + sm)
+        return max(0.0, mins / 60.0)
+    except Exception:  # noqa: BLE001
+        return 2.0
+
+
+def grade_seat_risk(
+    area: str = "",
+    start_time: str = "",
+    end_time: str = "",
+    *,
+    special_areas: tuple = ("研习间", "VIP", "静音"),
+    peak_hours: tuple = ((11, 14), (17, 21)),
+) -> RiskLevel:
+    """座位预约风险分级（配置化阈值）"""
+    duration = _parse_duration(start_time, end_time)
+    # 高风险：特殊区域 / 跨午夜 / 超长
+    if any(tag in area for tag in special_areas):
+        return RiskLevel.HIGH
+    if duration > 4:
+        return RiskLevel.MEDIUM
+    # 高峰时段 → 中风险
+    try:
+        h = int(start_time[:2]) if start_time else 12
+    except Exception:  # noqa: BLE001
+        h = 12
+    for lo, hi in peak_hours:
+        if lo <= h < hi:
+            return RiskLevel.MEDIUM
+    return RiskLevel.LOW
+
+
+def grade_renew_risk(*, overdue: bool = False, fines: float = 0.0, renew_count: int = 0) -> RiskLevel:
+    """续借风险分级：欠款 / 超期 → 高；已续借次数多 → 中"""
+    if overdue or fines > 0:
+        return RiskLevel.HIGH
+    if renew_count >= 1:
+        return RiskLevel.MEDIUM
+    return RiskLevel.LOW
+
+
 @dataclass
 class DialogueState:
     """对话状态追踪器"""
@@ -45,6 +111,8 @@ class DialogueState:
     session_id: str
     intent: Optional[str] = None       # 当前识别到的业务意图
     phase: str = "idle"                # idle / collecting_slots / confirming / completed
+    stage: Optional[str] = None         # Module 5 阶段模型（替代两态判断）
+    risk_level: Optional[str] = None    # Module 5.4 风险分级
     slots: Dict[str, Slot] = field(default_factory=dict)
     last_user_id: Optional[str] = None
     pending_confirm: Optional[Dict] = None  # 待确认操作：{action, payload, confirm_id, expires_at}
@@ -144,6 +212,8 @@ class DialogueState:
             "session_id": self.session_id,
             "intent": self.intent,
             "phase": self.phase,
+            "stage": self.stage,
+            "risk_level": self.risk_level,
             "slots": {
                 k: {"name": s.name, "value": s.value, "filled": s.filled}
                 for k, s in self.slots.items()

@@ -13,14 +13,17 @@
 因此指标衡量的最小粒度是「知识条目」而非「整篇文档」。
 
 用法：
-    python eval/run_eval.py                       # 默认配置（稀疏 + 内存）评测
+    python eval/run_eval.py                       # 默认配置（BGE-M3 稠密 + BM25 混合检索）评测
     python eval/run_eval.py --top-k 1 --top-k 3   # 指定多个 K
-    python eval/run_eval.py --no-rerank           # 只测向量召回，跳过精排
-    python eval/run_eval.py --compare             # 稀疏 n-gram vs 稠密 BGE 对比
-    python eval/run_eval.py --mode external       # 只用稠密 BGE 评测
+    python eval/run_eval.py --no-rerank           # 只测融合召回，跳过 Cross-Encoder 精排
+    python eval/run_eval.py --no-bm25             # 关闭 BM25，只测纯稠密检索
+    python eval/run_eval.py --fusion weighted     # 改用加权融合（默认 RRF）
+    python eval/run_eval.py --compare             # 稀疏 n-gram vs 稠密 BGE-M3 对比
+    python eval/run_eval.py --mode external       # 只用稠密 BGE-M3 评测
 """
 import argparse
 import json
+import math
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -78,11 +81,16 @@ def load_eval_set(path: Path = DEFAULT_EVAL_SET) -> List[EvalCase]:
 
 # ==================== 检索器构建 ====================
 def build_retriever(
-    embedding_mode: str = "ngram",
+    embedding_mode: str = "external",
     vector_store_mode: str = "memory",
     chunk_size: int = 200,
     chunk_overlap: int = 50,
     collection_name: Optional[str] = None,
+    enable_bm25: bool = True,
+    fusion: str = "rrf",
+    rrf_k: int = 60,
+    dense_weight: float = 0.6,
+    bm25_weight: float = 0.4,
 ):
     """构建一个独立的检索器用于评测（不污染服务运行时的单例索引）"""
     knowledge = KnowledgeService()
@@ -108,7 +116,29 @@ def build_retriever(
             for chunk, vector in zip(chunks, vectors):
                 store.add(chunk, vector)
 
-    return Retriever(embedder, store), chunks
+    # BM25 关键词召回一路（混合检索的稀疏侧；依赖缺失自动降级为纯稠密）
+    bm25 = None
+    if enable_bm25:
+        try:
+            from app.rag.bm25 import BM25Index
+
+            bm25 = BM25Index()
+            bm25.add_batch(chunks, [c.content for c in chunks])
+        except Exception as exc:  # noqa: BLE001
+            print(f"  ! BM25 不可用，降级纯稠密：{exc}")
+            bm25 = None
+
+    retriever = Retriever(
+        embedder,
+        store,
+        None,
+        bm25,
+        fusion=fusion,
+        rrf_k=rrf_k,
+        dense_weight=dense_weight,
+        bm25_weight=bm25_weight,
+    )
+    return retriever, chunks
 
 
 # ==================== 指标计算 ====================
@@ -135,6 +165,7 @@ class CaseResult:
     hit: int
     keyword_hit: int
     top1_source: str
+    ndcg: Dict[int, float] = field(default_factory=dict)
 
 
 def score_results(
@@ -166,6 +197,19 @@ def score_results(
         meta = results[0]["chunk"].metadata
         top1_source = f"{meta.get('source', '?')}#{meta.get('category', '?')}"
 
+    def _ndcg_at(ids, rel_set, k):
+        rel = [1 if c in rel_set else 0 for c in ids[:k]]
+        dcg = sum((2 ** r - 1) / math.log2(i + 1) for i, r in enumerate(rel, 1))
+        ideal = sum(1.0 / math.log2(i + 1) for i in range(1, min(len(rel_set), k) + 1))
+        return dcg / ideal if ideal > 0 else 0.0
+
+    ndcg = {}
+    for k in (1, 3, 5):
+        rel = [1 if c in relevant else 0 for c in retrieved_ids[:k]]
+        dcg = sum((2 ** r - 1) / math.log2(i + 1) for i, r in enumerate(rel, 1))
+        ideal = sum(1.0 / math.log2(i + 1) for i in range(1, min(len(relevant), k) + 1))
+        ndcg[k] = dcg / ideal if ideal > 0 else 0.0
+
     return CaseResult(
         case_id=case.id,
         query=case.query,
@@ -175,6 +219,7 @@ def score_results(
         hit=int(bool(hits)),
         keyword_hit=keyword_hit,
         top1_source=top1_source,
+        ndcg=ndcg,
     )
 
 
@@ -217,6 +262,7 @@ def evaluate(
                 round(sum(kw_results) / len(kw_results), 4) if kw_results else None
             ),
             "mrr": round(sum(r.reciprocal_rank for r in rs) / n, 4),
+            f"ndcg@{k}": round(sum(r.ndcg[k] for r in rs) / n, 4),
         }
 
     # 记录最差 K 下的失败样本，供人工分析与知识补录
@@ -263,13 +309,14 @@ def summary_rows(summaries: Sequence[Dict]) -> List[List]:
                     m["mrr"],
                     m[f"hit_rate@{k}"],
                     m[f"keyword_hit_rate@{k}"],
+                    m[f"ndcg@{k}"],
                 ]
             )
     return rows
 
 
 def print_report(summaries: Sequence[Dict]) -> None:
-    headers = ["配置", "Top-K", "Recall", "Precision", "MRR", "HitRate", "KeywordHit"]
+    headers = ["配置", "Top-K", "Recall", "Precision", "MRR", "HitRate", "KeywordHit", "nDCG"]
     print()
     print(format_table(headers, summary_rows(summaries)))
     print()
@@ -289,7 +336,7 @@ def write_report(summaries: Sequence[Dict], output_dir: Path = DEFAULT_REPORT_DI
     )
 
     lines = ["# RAG 检索质量评测报告", ""]
-    lines.append("| 配置 | Top-K | Recall | Precision | MRR | HitRate | KeywordHit |")
+    lines.append("| 配置 | Top-K | Recall | Precision | MRR | HitRate | KeywordHit | nDCG |")
     lines.append("|---|---|---|---|---|---|---|")
     for row in summary_rows(summaries):
         lines.append("| " + " | ".join(str(c) for c in row) + " |")
@@ -314,7 +361,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="RAG 检索质量评测")
     parser.add_argument("--eval-set", type=Path, default=DEFAULT_EVAL_SET)
     parser.add_argument(
-        "--mode", default="ngram", choices=["ngram", "external"], help="Embedding 模式"
+        "--mode", default="external", choices=["ngram", "external"], help="Embedding 模式"
     )
     parser.add_argument(
         "--store", default="", choices=["", "memory", "chroma"], help="向量库模式"
@@ -324,6 +371,11 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     )
     parser.add_argument("--no-rerank", action="store_true", help="只测向量召回，跳过精排")
     parser.add_argument("--compare", action="store_true", help="对比稀疏与稠密两种检索器")
+    parser.add_argument("--no-bm25", action="store_true", help="关闭 BM25，只测纯稠密检索")
+    parser.add_argument(
+        "--fusion", default="rrf", choices=["rrf", "weighted"], help="双路融合方式"
+    )
+    parser.add_argument("--rrf-k", type=int, default=60, help="RRF 的 k 参数")
     parser.add_argument("--chunk-size", type=int, default=200)
     parser.add_argument("--chunk-overlap", type=int, default=50)
     return parser.parse_args(argv)
@@ -342,7 +394,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     summaries = []
     for mode, store_mode in configs:
-        label = f"{mode}+{store_mode}" + ("(recall)" if args.no_rerank else "")
+        label = f"{mode}+{store_mode}" + ("+bm25" if not args.no_bm25 else "") + ("(recall)" if args.no_rerank else "")
         print(f"\n构建检索器：{label} ...")
         try:
             retriever, chunks = build_retriever(
@@ -351,6 +403,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 chunk_size=args.chunk_size,
                 chunk_overlap=args.chunk_overlap,
                 collection_name=f"rag_eval_{mode}",
+                enable_bm25=not args.no_bm25,
+                fusion=args.fusion,
+                rrf_k=args.rrf_k,
             )
         except Exception as exc:  # noqa: BLE001
             print(f"  ! 跳过 {label}：{exc}")

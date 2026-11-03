@@ -7,16 +7,13 @@ from fastapi.responses import StreamingResponse
 
 from ...core.auth import (
     CurrentUser,
-    create_access_token,
-    create_refresh_token,
     get_current_user,
 )
 from ...core.logger import logger
 from ...core.permissions import auth_upgrade_flow, permission_manager
 from ...core.session_manager import session_manager
-from ...models.schemas import ChatMessage, FeedbackRequest, LoginRequest
+from ...models.schemas import ChatMessage, FeedbackRequest
 from ...services.chat_service import chat_service
-from ...services.user_service import user_service
 from ...utils.helpers import fail, ok, sse_event
 
 router = APIRouter(prefix="/chat", tags=["对话"])
@@ -143,25 +140,6 @@ async def feedback_stats():
         "avg_rating": round(sum(ratings) / len(ratings), 2) if ratings else 0,
         "helpful_rate": round(len(helpful) / total * 100, 1),
         "low_rating_count": sum(1 for r in ratings if r <= 2),
-    })
-
-
-@router.post("/login")
-async def login(payload: LoginRequest):
-    """登录接口：签发 JWT（access + refresh）"""
-    auth_ok, message, info = user_service.authenticate(payload.user_id, payload.password)
-    if not auth_ok:
-        return fail(401, message)
-    access = create_access_token(info["user_id"], info["role"])
-    refresh = create_refresh_token(info["user_id"], info["role"])
-    return ok({
-        "user_id": info["user_id"],
-        "name": info.get("name", ""),
-        "role": info["role"],
-        "token": access,
-        "refresh_token": refresh,
-        "token_type": "bearer",
-        "message": message,
     })
 
 

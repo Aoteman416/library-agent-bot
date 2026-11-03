@@ -1,4 +1,4 @@
-"""向量存储：内存稀疏索引（默认） / Chroma 持久化稠密索引（可选）
+"""向量存储：Chroma 持久化稠密索引（默认） / 内存稀疏索引（零依赖回退）
 
 设计要点（面试可讲）：
 - 两种实现暴露同一组接口：add / search / size / clear / get_chunk，
@@ -16,7 +16,7 @@ from .embeddings import Vector, _as_list
 
 
 class VectorStore:
-    """基于稀疏向量的内存向量库（零依赖，默认实现）"""
+    """基于稀疏向量的内存向量库（零依赖，设 VECTOR_STORE_MODE=memory 时启用，作 Chroma 缺失/CI 回退）"""
 
     name = "memory"
 
@@ -217,7 +217,7 @@ class ChromaStore:
 def create_store(mode: str = "memory", **kwargs):
     """工厂方法：按配置创建向量库
 
-    memory → 内存稀疏索引（默认，零依赖）
+    memory → 内存稀疏索引（零依赖回退）
     chroma → Chroma 持久化索引；依赖缺失或初始化失败时自动回退到 memory
     """
     from ..core.logger import logger

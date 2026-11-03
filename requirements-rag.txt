@@ -1,14 +1,19 @@
 # ===== RAG 增强依赖（可选）=====
-# 作用：把默认的「稀疏 n-gram + 内存索引」切换为「BGE 稠密向量 + Chroma 持久化索引」，
-#       并启用 Cross-Encoder 重排序（bge-reranker-large）。
+# 作用：启用「BGE-M3 稠密向量 + BM25 关键词」混合检索（默认配置），
+#       并可切换为 Chroma 持久化索引、启用 Cross-Encoder 重排序（bge-reranker-large）。
 # 安装：pip install -r requirements-rag.txt
-# 切换：.env 中设置 EMBEDDING_MODE=external、VECTOR_STORE_MODE=chroma、RERANKER_ENABLED=true
+# 切换：.env 中设置 EMBEDDING_MODE=external（默认已是）、VECTOR_STORE_MODE=chroma、RERANKER_ENABLED=true
 #
-# 说明：不安装也能正常启动服务，会自动回退到零依赖的稀疏检索（见 create_embedder / create_store / create_reranker）。
+# 说明：不安装也能启动（sentence-transformers 缺失→Embedding 回退 ngram；rank_bm25 缺失→混合检索降级纯稠密），
+#       但默认生产配置需要本文件提供的稠密 + BM25 双路能力（见 create_embedder / bm25 / retriever）。
 
-# 稠密 Embedding（默认模型 BAAI/bge-large-zh-v1.5，约 1.3GB，首次运行自动下载）
+# 稠密 Embedding（默认模型 BAAI/bge-m3，约 2.2GB，首次运行自动下载）
 sentence-transformers>=2.7
 torch>=2.2
+
+# 混合检索的稀疏一路：BM25 关键词召回（中文需 jieba 分词，缺失时回退字/2-gram）
+rank-bm25>=0.2.2
+jieba>=0.42.1
 
 # 向量数据库（默认落盘到 ./data/chroma）
 chromadb>=0.5

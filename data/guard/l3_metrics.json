@@ -1,0 +1,13 @@
+{
+  "train_size": 693,
+  "classes": [
+    "data_leak",
+    "instruction_override",
+    "normal",
+    "role_switch"
+  ],
+  "cv_accuracy_mean": 0.948,
+  "cv_accuracy_std": 0.0055,
+  "cv_macro_f1_mean": 0.8516,
+  "cv_macro_f1_std": 0.0239
+}

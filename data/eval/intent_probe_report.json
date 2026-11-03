@@ -1,0 +1,53 @@
+{
+  "model": "char_wb 1-3gram TFIDF + LogisticRegression(C=5, balanced)",
+  "dataset": "data/eval/intent_eval_2000.jsonl",
+  "baseline_keyword": {
+    "accuracy": 0.622,
+    "macro_f1": 0.6536,
+    "pred_unknown_rate": 0.4025,
+    "unknown_precision": 0.3056,
+    "unknown_fp": 559
+  },
+  "protocol_a_5fold_all2000": {
+    "n": 2000,
+    "accuracy": 0.97,
+    "macro_f1": 0.97,
+    "pred_unknown_rate": 0.1215,
+    "unknown_precision": 0.9918,
+    "unknown_recall": 0.964,
+    "unknown_tp": 241,
+    "unknown_fp": 2,
+    "unknown_fn": 9,
+    "per_fold_accuracy": [
+      0.9725,
+      0.96,
+      0.9775,
+      0.9675,
+      0.9725
+    ],
+    "note": "泄漏性乐观，不可作为对外成绩"
+  },
+  "protocol_b_train_anchor_test_llm": {
+    "n": 1700,
+    "accuracy": 0.86,
+    "macro_f1": 0.8589,
+    "pred_unknown_rate": 0.1041,
+    "unknown_precision": 0.9379,
+    "unknown_recall": 0.7981,
+    "unknown_tp": 166,
+    "unknown_fp": 11,
+    "unknown_fn": 42,
+    "note": "跨分布零重叠，主口径"
+  },
+  "protocol_c_train_llm_test_anchor": {
+    "n": 300,
+    "accuracy": 0.9,
+    "macro_f1": 0.9004,
+    "pred_unknown_rate": 0.1167,
+    "unknown_precision": 0.9143,
+    "unknown_recall": 0.7619,
+    "unknown_tp": 32,
+    "unknown_fp": 3,
+    "unknown_fn": 10
+  }
+}

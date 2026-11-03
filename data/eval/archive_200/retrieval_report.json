@@ -1,0 +1,103 @@
+[
+  {
+    "label": "纯稀疏-ngramTFIDF",
+    "num_cases": 200,
+    "metrics": {
+      "1": {
+        "recall@1": 0.845,
+        "precision@1": 0.845,
+        "hit_rate@1": 0.845,
+        "keyword_hit_rate@1": 0.88,
+        "mrr": 0.845,
+        "ndcg@1": 0.845
+      },
+      "3": {
+        "recall@3": 0.96,
+        "precision@3": 0.32,
+        "hit_rate@3": 0.96,
+        "keyword_hit_rate@3": 0.965,
+        "mrr": 0.8958,
+        "ndcg@3": 0.9123
+      },
+      "5": {
+        "recall@5": 0.995,
+        "precision@5": 0.199,
+        "hit_rate@5": 0.995,
+        "keyword_hit_rate@5": 0.995,
+        "mrr": 0.9043,
+        "ndcg@5": 0.9272
+      }
+    },
+    "failures": [
+      {
+        "id": 73,
+        "query": "非本校学生能进图书馆吗",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "开放时间与办证.md#办证方法",
+        "expected": "开放时间与办证.md#校外访客"
+      }
+    ]
+  },
+  {
+    "label": "BM25融合-ngram+BM25",
+    "num_cases": 200,
+    "metrics": {
+      "1": {
+        "recall@1": 0.805,
+        "precision@1": 0.805,
+        "hit_rate@1": 0.805,
+        "keyword_hit_rate@1": 0.845,
+        "mrr": 0.805,
+        "ndcg@1": 0.805
+      },
+      "3": {
+        "recall@3": 0.92,
+        "precision@3": 0.3067,
+        "hit_rate@3": 0.92,
+        "keyword_hit_rate@3": 0.93,
+        "mrr": 0.8542,
+        "ndcg@3": 0.871
+      },
+      "5": {
+        "recall@5": 0.995,
+        "precision@5": 0.199,
+        "hit_rate@5": 0.995,
+        "keyword_hit_rate@5": 0.995,
+        "mrr": 0.8719,
+        "ndcg@5": 0.9024
+      }
+    },
+    "failures": [
+      {
+        "id": 73,
+        "query": "非本校学生能进图书馆吗",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "开放时间与办证.md#办证方法",
+        "expected": "开放时间与办证.md#校外访客"
+      }
+    ]
+  },
+  {
+    "label": "纯稠密-BGE",
+    "metrics": {},
+    "failures": [],
+    "env_blocked": true,
+    "note": "需 BAAI/bge-m3 或 bge-small + bge-reranker-v2-m3，本环境 HuggingFace 不可达"
+  },
+  {
+    "label": "混合-BGE+BM25",
+    "metrics": {},
+    "failures": [],
+    "env_blocked": true,
+    "note": "需 BAAI/bge-m3 或 bge-small + bge-reranker-v2-m3，本环境 HuggingFace 不可达"
+  },
+  {
+    "label": "重排-混合+CrossEncoder",
+    "metrics": {},
+    "failures": [],
+    "env_blocked": true,
+    "note": "需 BAAI/bge-m3 或 bge-small + bge-reranker-v2-m3，本环境 HuggingFace 不可达"
+  }
+]

@@ -1,30 +1,42 @@
 [
   {
-    "label": "ngram+memory",
-    "num_cases": 48,
+    "label": "ngram+memory+bm25(recall)",
+    "num_cases": 200,
     "metrics": {
       "1": {
-        "recall@1": 0.8542,
-        "precision@1": 0.8542,
-        "hit_rate@1": 0.8542,
-        "keyword_hit_rate@1": 0.8542,
-        "mrr": 0.8542
+        "recall@1": 0.805,
+        "precision@1": 0.805,
+        "hit_rate@1": 0.805,
+        "keyword_hit_rate@1": 0.845,
+        "mrr": 0.805,
+        "ndcg@1": 0.805
       },
       "3": {
-        "recall@3": 0.9583,
-        "precision@3": 0.3194,
-        "hit_rate@3": 0.9583,
-        "keyword_hit_rate@3": 0.9583,
-        "mrr": 0.8958
+        "recall@3": 0.92,
+        "precision@3": 0.3067,
+        "hit_rate@3": 0.92,
+        "keyword_hit_rate@3": 0.93,
+        "mrr": 0.8542,
+        "ndcg@3": 0.871
       },
       "5": {
-        "recall@5": 1.0,
-        "precision@5": 0.2,
-        "hit_rate@5": 1.0,
-        "keyword_hit_rate@5": 1.0,
-        "mrr": 0.9062
+        "recall@5": 0.995,
+        "precision@5": 0.199,
+        "hit_rate@5": 0.995,
+        "keyword_hit_rate@5": 0.995,
+        "mrr": 0.8719,
+        "ndcg@5": 0.9024
       }
     },
-    "failures": []
+    "failures": [
+      {
+        "id": 73,
+        "query": "非本校学生能进图书馆吗",
+        "hit": false,
+        "keyword_hit": false,
+        "top1": "开放时间与办证.md#办证方法",
+        "expected": "开放时间与办证.md#校外访客"
+      }
+    ]
   }
 ]

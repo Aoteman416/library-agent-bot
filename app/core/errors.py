@@ -67,10 +67,16 @@ class LLMTimeoutError(BizError):
         super().__init__(4003, message, status_code=504, data=data)
 
 
+class DownstreamError(BizError):
+    """下游服务（大模型 / 知识库 / 借阅系统）不可用，由熔断器触发，映射 503"""
+    def __init__(self, message="下游服务不可用，请稍后重试", data=None):
+        super().__init__(4004, message, status_code=503, data=data)
+
+
 # 错误码 → HTTP 状态码（用于文档/日志）
 ERROR_CODES = {
     0: 200, 1001: 400, 1002: 401, 1003: 403,
-    2001: 404, 3001: 429, 4001: 500, 4002: 503, 4003: 504,
+    2001: 404, 3001: 429, 4001: 500, 4002: 503, 4003: 504, 4004: 503,
 }
 
 
